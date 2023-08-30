@@ -1,0 +1,82 @@
+﻿@inject ProtectedLocalStorage localStorage
+@inject IStore store
+@implements IDisposable
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">Chatty</a>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+    <nav class="flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="oi oi-home" aria-hidden="true"></span> Chat
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="login">
+                <span class="oi oi-plus" aria-hidden="true"></span> Login
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="users">
+                <span class="oi oi-list-rich" aria-hidden="true"></span> Users
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="about">
+                <span class="oi oi-list-rich" aria-hidden="true"></span> About
+            </NavLink>
+        </div>
+    </nav>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+    protected override void OnInitialized()
+    {
+        store.AddStateChangedAction(() => { StateHasChanged(); });
+    }
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            GetUser();
+        } 
+    }
+    private async void GetUser()
+    {
+        try
+        {
+            var result = await localStorage.GetAsync<string>("active-user");
+            if (!string.IsNullOrEmpty(result.Value))
+            {
+                string id = result.Value;
+                var user = database.Read<string, Users>("Users",id);
+                if (!string.IsNullOrEmpty(user.Value.Id))
+                {
+                    store.AddUser(user.Value);
+                }
+            }
+        }
+        catch (Exception)
+        {
+        }
+    }
+    public void Dispose()
+    {
+        store.RemoveStateChangedAction(() => { StateHasChanged(); });
+    }
+}

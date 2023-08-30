@@ -1,0 +1,269 @@
+﻿@page "/login"
+@inject ProtectedLocalStorage localStorage
+@inject ImageUploadService imageUpload
+@inject NavigationManager navigationManager
+@inject MailService mailService
+@inject IStore store
+
+<div class="login">
+    <EditForm Model="user" OnValidSubmit="SignUSer">
+        <div class="container @GetActiveClass(signup)">
+            <div class="header"><h3>Sign Up</h3></div>
+            <em class="@msgClass">@message</em>
+            <InputText @bind-Value="user.Name" maxlength="100" type="text" placeholder="Enter Full name *" />
+            <InputSelect class="input" @bind-Value="user.Gender">
+                <option value="Nil">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+            </InputSelect>
+            <InputText @onblur="(() => IsLoginEmailValid(user.Email))" @bind-Value="user.Email" maxlength="100" type="email" placeholder="Enter Valid email *" />
+            <InputText @onblur="(() => IsMobileValid(user.Mobile))" @bind-Value="user.Mobile" maxlength="14" type="text" placeholder="Enter mobile number" />
+            <InputText @bind-Value="user.Password1" maxlength="100" type="password" placeholder="Enter password *" />
+            <InputText @onblur="(() => CheckPassword())" @bind-Value="user.Password2" maxlength="100" type="password" placeholder="Confirm password *" />
+            <div class="d-flex justify-content-between">
+                <InputFile OnChange="Loadfile" />
+                <div class="img">
+                    <img src="@user.ImagePath" />
+                </div>
+            </div>
+            <span @onclick="(() => {active = login;})">already registered? log in now</span><br />
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </div>
+    </EditForm>
+    <div class="container @GetActiveClass(login)">
+        <div class="header"><h3>Login Up</h3></div>
+        <em class="@msgClass">@message</em>
+        <input @onblur="(() => IsLoginEmailValid(loginEmail))" @bind="loginEmail" type="email" placeholder="Enter registered email *" />
+        <input @bind="loginPassword" type="password" placeholder="Enter password *" />
+        <span @onclick="(() => {active = signup;})">don't have account? sign up now</span><br />
+        <span @onclick="(() => {active = retrieve;})">forgotten password? click here</span><br />
+        <button @onclick="LogUser" class="btn btn-primary">Submit</button>
+    </div>
+    <div class="container @GetActiveClass(retrieve)">
+        <div class="header"><h3>Retrieve Password</h3></div>
+        <i class="@msgClass">@message</i><br />
+        <input @bind="forgottenEmail" @onblur="(()=> IsLoginEmailValid(forgottenEmail))" type="text" placeholder="Enter registered email *" />
+        <span @onclick="(() => {active = login;})">Back to log in</span><br />
+        <button @onclick="Retrieve" class="btn btn-primary">Submit</button>
+    </div>
+</div>
+
+@code {
+    private Users user = new Users();
+    string message = "";
+    string msgClass = "";
+    List<Users> users = new();
+    private bool isEmailRegistered = false;
+    private bool isMobileValid = false;
+    private bool isLoginEmailValid;
+    private string login = "login";
+    private string signup = "signup";
+    private string retrieve = "retrieve";
+    string active = "login";
+    string domainName = "";
+    private string loginEmail = "";
+    private string loginPassword = "";
+    private string forgottenEmail = "";
+
+    protected override void OnInitialized()
+    {
+        var uri = new Uri(navigationManager.Uri);
+        domainName = uri.Host;
+        user.ImagePath = "./images/user-2.png";
+        message = "";
+        user.Gender = "Nil";
+        users = database.ReadAll<string, Users>("Users").Values.ToList();
+    }
+
+    private string GetActiveClass(string className)
+    {
+        return active == className ? "active" : "";
+    }
+
+    private bool IsEmailRegistered()
+    {
+        if (users.Count > 0)
+        {
+            isEmailRegistered = users.Any(x =>
+                x.Email.ToLower().Equals(user.Email.ToLower()));
+            if (isEmailRegistered)
+            {
+                message = "This email has been registered by another user.";
+                msgClass = "red";
+                return true;
+            }
+            else { message = string.Empty; ; }
+        }
+        return false;
+    }
+    private void LogUser()
+    {
+        if (IsLoginEmailValid(loginEmail) && loginPassword != "")
+        {
+            if (users.Count > 0)
+            {
+                var userFound = users.Find(x =>
+                    x.Email.ToLower().Equals(loginEmail.ToLower()) &&
+                    x.Password1.Equals(loginPassword));
+                if (!string.IsNullOrEmpty(userFound?.Id))
+                {
+                    SaveUserToCookie(userFound.Id);
+                    store.AddUser(userFound);
+                    navigationManager.NavigateTo("/");
+                    message = "";
+                }
+                else
+                {
+                    message = "log in info not found in database. Kindly sign up.";
+                    msgClass = "red";
+                }
+            }
+        }
+        else
+        {
+            message = "email or password is invalid!!!";
+            msgClass = "red";
+        }
+    }
+    private void SignUSer()
+    {
+        if (user.ImagePath != "" && user.ImagePath != "./images/user-2.png")
+        {
+            if (user.Name != "" && isLoginEmailValid && isMobileValid && CheckPassword() && !IsEmailRegistered())
+            {
+                user.Id = Guid.NewGuid().ToString();
+                if (user.Email.Equals("flexyvic12@gmail.com"))
+                {
+                    user.IsAdmin = true;
+                }
+                string key = JsonConvert.SerializeObject(user.Id);
+                string value = JsonConvert.SerializeObject(user);
+                var isCreated = database.Create("Users", key, value);
+                if (isCreated)
+                {
+                    message = $"Congratulations {user.Name}, your sign up was successful!!! click on the Chat Menu and have an awesome experience.";
+                    msgClass = "green";
+                    string body = $"Thank you {user.Name} for signing up on our chatting system. Enjoy seamless chatty experience at <a href=\"https://{domainName}\">{domainName}</a>. \n Kindly share this link with a friend for better friendship and chatting experience.";
+                    mailService.Send("peters.soft.network@gmail.com", user.Email, "PSN Chatty Sign Up", body);
+                    SaveUserToCookie(user.Id);
+                    users.Add(user);
+                    store.AddUser(user);
+                    user = new Users();
+                }
+            }
+        }
+        else
+        {
+            message = "Please upload an image.";
+            msgClass = "red";
+        }
+    }
+    private async void SaveUserToCookie(string userId)
+    {
+        if (!string.IsNullOrEmpty(userId))
+        {
+            try
+            {
+                await localStorage.SetAsync("active-user", userId);
+            }
+            catch (Exception)
+            {
+                message = "";
+            }
+        }
+    }
+    private bool IsLoginEmailValid(string loginEmail)
+    {
+        string pattern = @"^([\w\.\-]+)@([\w\-]+)((\.(\w){2,3})+)$";
+        Regex regex = new Regex(pattern);
+        isLoginEmailValid = regex.IsMatch(loginEmail);
+        if (!isLoginEmailValid)
+        {
+            message = "email field is invalid, email must be in the form abc@xyz.com";
+            msgClass = "red";
+            return false;
+        }
+        else
+        {
+            message = "";
+            return true;
+        }
+
+    }
+    private bool IsMobileValid(string mobile)
+    {
+        if (!string.IsNullOrEmpty(mobile))
+        {
+            //string pattern = @"^\+(?:\d{1,3})?\d{10}$";
+            string pattern = @"^(?:\+?\d{1,3})?(?:0|\d{1,4})\d{10}$";//@"^(?:\+?\d{1,3})?\d{10}$";
+            Regex regex = new Regex(pattern);
+            if (mobile.Contains("+") || (!mobile.Contains("+") && mobile.Length == 11 && mobile.StartsWith("0")))
+            {
+                isMobileValid = regex.IsMatch(mobile);
+                if (!isMobileValid)
+                {
+                    message = "Mobile must have max of 14 characters \n" +
+                        "It may include '+' sign, country code and mobile digits";
+                    msgClass = "red";
+                    return false;
+                }
+                else
+                {
+                    message = "";
+                    return true;
+                }
+            }
+            else
+            {
+                message = "Mobile number is not in a correct format";
+                msgClass = "red";
+                return false;
+            }
+        }
+        return false;
+    }
+    private bool CheckPassword()
+    {
+        if (user.Password1.Equals(user.Password2) && user.Password1 != "")
+        {
+            message = "";
+            return true;
+        }
+        else
+        {
+            message = "password is not valid";
+            msgClass = "red";
+            return false;
+        }
+    }
+    private void Retrieve()
+    {
+        if (IsLoginEmailValid(forgottenEmail))
+        {
+            message = "processing, please wait ...";
+            if (users.Count > 0)
+            {
+                var userFound = users.Find(x =>
+                    x.Email.ToLower().Equals(forgottenEmail.ToLower()));
+                if (!string.IsNullOrEmpty(userFound?.Id))
+                {
+                    message = "kindly check your mail for retrieved password.";
+                    msgClass = "green";
+                    string body = $"Did you attempt to login @ <a href=\"https://{domainName}\">{domainName}</a>. \n Kindly continue with your retrieved password {userFound.Password1}.";
+                    mailService.Send("peters.soft.network@gmail.com", userFound.Email, "PSN Chatty Password Retrieval", body);
+                }
+                else
+                {
+                    message = "email info not found in database. Kindly sign up.";
+                    msgClass = "red";
+                }
+            }
+        }
+    }
+    private async void Loadfile(InputFileChangeEventArgs e)
+    {
+        var img = await imageUpload.CaptureFile(e.File);
+        user.ImagePath = img;
+    }
+}
+

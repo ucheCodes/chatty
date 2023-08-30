@@ -1,0 +1,145 @@
+﻿@page "/grouplock"
+@inject IStore store
+@implements IDisposable
+
+<div class="search-table d-flex justify-content-center">
+    <input @bind="searchVal" @onblur="(Search)" placeholder="search by name,email or gender" />
+</div>
+<section class="dynamic-table">
+    <div class="table">
+        <div class="table-header">
+            <h3>@groupName Group Restriction</h3>
+        </div>
+        <div class="table-lock">
+        <div class="table-body">
+            <table>
+                <thead>
+                    <tr>
+                        <th>S/N</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Mobile</th>
+                        <th>Gender</th>
+                        <th>Image</th>
+                        <th>Remove User</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in users)
+                    {
+                        if (!user.IsAdmin && user.Id != adminId)//&& not the person that created
+                        {
+                            count++;
+                            <tr>
+                                <td>@count</td>
+                                <td>@user.Name</td>
+                                <td>@user.Email</td>
+                                <td>@user.Mobile</td>
+                                <td>@user.Gender</td>
+                                <td><img src="@user.ImagePath" alt=""></td>
+                                @if (UserLockDict.ContainsKey(user.Id))
+                                {
+                                    <td><input checked="@UserLockDict[user.Id]" @onclick="(() => LockUser(user.Id))" type="checkbox" /></td>
+                                }
+                                else
+                                {
+                                    <td><input @onclick="(() => LockUser(user.Id))" type="checkbox" /></td>
+                                }
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+        </div>
+    </div>
+</section>
+
+@code {
+    List<Users> users = new();
+    List<Users> usersList = new();
+    int count = 0;
+    string groupId = "";
+    string adminId = "";
+    string groupName = "";
+    string searchVal = "";
+    Dictionary<string, bool> UserLockDict = new();
+    List<GroupLock> allGroupsLocked = new();
+    protected override void OnInitialized()
+    {
+        groupId = store.State().LockParameters.GroupId;
+        adminId = store.State().LockParameters.AdminId;
+        groupName = store.State().LockParameters.GroupName;
+        usersList = database.ReadAll<string, Users>("Users").Values.ToList();
+        allGroupsLocked = database.ReadAll<string, GroupLock>("GroupLock").Values.ToList();
+        users = usersList;
+    }
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            GetLockedUsers();
+        }
+        count = 0;
+    }
+    private void Search()
+    {
+        var _users = usersList.Where(x => x.Name.ToLower().Contains(searchVal.ToLower()) || x.Email.ToLower().Contains(searchVal.ToLower()) || x.Gender.ToLower().Equals(searchVal.ToLower()));
+        if (_users != null && _users.Count() > 0)
+        {
+            users = _users.ToList();
+        }
+        else
+        {
+            users = usersList;
+        }
+    }
+    private void GetLockedUsers()
+    {
+        if (allGroupsLocked.Count > 0)
+        {
+            foreach (var item in allGroupsLocked)
+            {
+                if (item.GroupId == groupId && item.AdminId == adminId)
+                {
+                    UserLockDict[item.UserLockedId] = item.IsLocked;
+                }
+            }
+            InvokeAsync(StateHasChanged);
+        }
+    }
+    private void LockUser(string userId)
+    {
+        if (groupId != "" && adminId != "" && userId != "")
+        {
+            var id = $"{groupId}/{userId}";
+            var groupLock = new GroupLock()
+                {
+                    AdminId = adminId,
+                    GroupId = groupId,
+                    Id = id,
+                    UserLockedId = userId
+                };
+            if (UserLockDict.ContainsKey(userId))
+            {
+                groupLock.IsLocked = !UserLockDict[userId];
+            }
+            else
+            {
+                groupLock.IsLocked = true; 
+                UserLockDict[userId] = true;
+            }
+            string key = JsonConvert.SerializeObject(groupLock.Id);
+            string value = JsonConvert.SerializeObject(groupLock);
+            var isLocked = database.Create("GroupLock", key, value);
+        }
+    }
+    public void Dispose()
+    {
+        store.AddGroupLockParameters("", "", "");
+        //work on gender and naming in alphabetical order
+        //can also include search
+    }
+}
+
+

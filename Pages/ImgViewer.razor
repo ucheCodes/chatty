@@ -1,0 +1,21 @@
+﻿<div class="d-flex flex-column justify-content-center align-items-center">
+    <img src="@ImgPath">
+    <p><i class="fas fa-user"></i>@userImgViewerName</p>
+    <p><i class="fas fa-phone"></i>@userImgViewerMobile</p>
+    <p><i class="fas fa-user"></i>@userImgViewerEmail</p>
+</div>
+
+@code{
+    [Parameter]
+    public bool ShowDialog { get; set; }
+    [Parameter]
+    public string ImgPath { get; set; } = "./images/1_LOGO.png";
+    [Parameter]
+    public string userImgViewerEmail { get; set; } = "";
+    [Parameter]
+    public string userImgViewerMobile { get; set; } = "";
+    [Parameter]
+    public string userImgViewerName { get; set; } = "";
+
+
+}

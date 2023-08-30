@@ -1,0 +1,25 @@
+﻿@page "/"
+@inject IStore store
+@implements IDisposable
+
+@if (!string.IsNullOrEmpty(store.State().ActiveUser.ActiveUser.Id))
+{
+    <Chat ActiveUser="store.State().ActiveUser.ActiveUser" />
+}
+else
+{
+    <Chat ActiveUser="new()"/>
+}
+
+@code{
+    protected override void OnInitialized()
+    {
+        //var m = store.State().ActiveUser.ActiveUser;
+        store.AddStateChangedAction(() => { StateHasChanged(); });
+    }
+    public void Dispose()
+    {
+        store.RemoveStateChangedAction(() => { StateHasChanged(); });
+    }
+}
+

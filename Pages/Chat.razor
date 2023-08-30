@@ -1,0 +1,1043 @@
+﻿@inject NavigationManager navigationManager
+@inject SignalRService signalR
+@inject ImageUploadService imageUpload
+@inject IJSRuntime jsRuntime
+@inject IStore store
+@implements IDisposable
+
+
+
+
+<!--chat messages between any two users-->
+<section class="chat @GetActiveChat(userMsg)">
+    <div class="chat-body">
+    <div class="chat-top">
+        <div class="info">
+            <span @onclick="(() => ToggleActiveChat(nil,nil))" class="arrow">&larr;</span>
+            <div class="name">
+                <strong>@ReceivingUser.Name</strong><br />
+                @if (userLastSeenMsg == "online")
+                {
+                    <em class="green">@userLastSeenMsg</em>
+                }
+                else
+                {
+                        <em class="red">@userLastSeenMsg</em>
+                }
+                </div>
+                <div 
+                    @onclick="(() => {showImgViewerDialog = true; 
+                        userImgViewerName = ReceivingUser.Name;
+                        userImgViewerEmail = ReceivingUser.Email;
+                        userImgViewerMobile = ReceivingUser.Mobile;
+                        userImgViewerId = ReceivingUser.ImagePath;})" class="img">
+                    <img src="@ReceivingUser.ImagePath" />
+                </div>
+        </div>
+        <div class="search">
+            <input @bind="searchVal" @onblur="(() => Search(userMsg))" placeholder="search here" />
+            <i class="fas fa-search"></i>
+        </div>
+    </div>
+    <div class="chat-container">
+        <div class="message-list active" id="message-list">
+            @if (chatMessages.Count > 0)
+            {
+                chatDate = chatMessages[0].Date;
+                <em>@chatDate.ToString("dddd MMM dd, yyyy")</em>
+                @foreach(var msg in chatMessages)
+                {
+                    cssChatClass = ActiveUser.Id == msg.SenderId ? send : receive;
+                    if (!msg.Date.Day.Equals(chatDate.Day))
+                    {
+                        chatDate = msg.Date;
+                       <em>@chatDate.ToString("dddd MMM dd, yyyy")</em>
+                    }
+                    if (msg.IsBodyImage)
+                    {
+                        <div class="message @cssChatClass">
+                            <img src="@msg.Body">
+                            <br /><em>@msg.Date.ToString("hh:mm tt")</em>
+                            &nbsp;
+                            @if (cssChatClass == send)
+                            {
+                               <i @onclick="(() => {showDialog = true; deleteId = msg.Id; deleteSection = userMsg;})" class="fas fa-trash"></i>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="message @cssChatClass">
+                            @msg.Body
+                            <br /><em>@msg.Date.ToString("hh:mm tt")</em>
+                            &nbsp;
+                            @if (cssChatClass == send)
+                            {
+                               <i @onclick="(() => {showDialog = true; deleteId = msg.Id; deleteSection = userMsg;})" class="fas fa-trash"></i>
+                            }
+                        </div>
+                    }
+                }
+            }
+            else
+            {
+                <em class="d-flex justify-content-center">say hi to @ReceivingUser.Name</em>
+            }
+        </div>
+        <div class="message-input">
+            <div class="x">
+                <div @onclick="() => OpenFileDialog(f1)" class="icon-menu">
+                    <i class="fas fa-image"></i>
+                </div>
+
+                <input @bind="chatBody" type="text" placeholder="Type your message...">
+            </div>
+            <button @onclick="(()=>SendChat(false))">Send</button>
+        </div>
+        <div class="hide" style="display: none;">
+                <InputFile accept=".jpg,.png,.gif,.jpeg" id="f1" OnChange="((e) => Loadfile(e,userMsg))" />
+        </div>
+
+    </div>
+</div>
+</section>
+
+
+<!--chat messages between group users-->
+<section class="chat @GetActiveChat(groupMsg)">
+    <div class="chat-body">
+        <div class="chat-top">
+            <div class="info">
+                <span @onclick="(() => ToggleActiveChat(nil,nil))" class="arrow">&larr;</span>
+                <div class="name">
+                    <strong>@currentGroup.Name</strong><br />
+                    <em>@usersList.Count participants</em>
+                </div>
+                <div class="img">
+                    <img src="@currentGroup.GroupImg" />
+                </div>
+            </div>
+            <div class="search">
+                <input @bind="searchVal" @onblur="(() => Search(groupMsg))" placeholder="search here" />
+                <i class="fas fa-search"></i>
+            </div>
+        </div>
+        <div class="chat-container">
+            <div class="message-list active" id="message-group">
+
+                @if (currentGroupChats.Count > 0)
+                {
+                    groupChatDate = currentGroupChats[0].Date;
+                    <em>@groupChatDate.ToString("dddd MMM dd, yyyy")</em>
+                    @foreach (var chat in currentGroupChats)
+                    {
+                        cssChatClass = ActiveUser.Id == chat.SenderId ? send : receive;
+                        if (!chat.Date.Day.Equals(groupChatDate.Day))
+                        {
+                            groupChatDate = chat.Date;
+                            <em>@chat.Date.ToString("dddd MMM dd, yyyy")</em>
+                        }
+                        if (chat.IsBodyImage)
+                        {
+                            <div class="message @cssChatClass">
+                                <img src="@chat.Body">
+                                <br /><em>@chat.Date.ToString("hh:mm tt")</em>
+                                &nbsp;
+                                @if (cssChatClass == send)
+                                {
+                                     <i class="fas fa-trash" @onclick="(() => {showDialog = true; deleteId = chat.Id; deleteSection = groupMsg;})"/>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="message @cssChatClass">
+                                @chat.Body<br/>
+                                @if (cssChatClass == "send")
+                                {
+                                    <em>@chat.Date.ToString("hh:mm tt")</em>
+                                    <i class="fas fa-trash" @onclick="(() => {showDialog = true; deleteId = chat.Id; deleteSection = groupMsg;})" />
+                                }
+                                else if (cssChatClass == "receive")
+                                {
+                                    <img class="group-user" src="@chat.SenderImg" />
+                                    <em>@chat.SenderNames &nbsp; @chat.Date.ToString("hh:mm tt")</em>
+                                }
+                            </div>
+                        }
+                    }
+                }
+                else
+                {
+                    <em class="d-flex justify-content-center">start a conversation in this group</em>
+                }
+            </div>
+            <div class="message-input">
+                <div class="x">
+                    <div @onclick="() => OpenFileDialog(f3)" class="icon-menu">
+                        <i class="fas fa-image"></i>
+                    </div>
+                    <input @bind="groupChatBody" type="text" placeholder="Type your message...">
+                </div>
+                <button @onclick="(() => AddGroupChat(false))">Send</button>
+            </div>
+            <div class="hide" style="display: none;">
+                <InputFile accept=".jpg,.png,.gif,.jpeg" id="f3" OnChange="((e) => Loadfile(e,groupMsg))" />
+            </div>
+
+        </div>
+    </div>
+</section>
+
+
+<!--list of groups and users info-->
+<section class="chat @GetActiveChat(nil)">
+    <div class="chat-body">
+        <div class="chat-top">
+            <div class="info">
+            @if (ActiveUser.Id != "")
+            {
+                <div 
+                    @onclick="(() => {showImgViewerDialog = true; 
+                        userImgViewerName = ActiveUser.Name;
+                        userImgViewerEmail = ActiveUser.Email;
+                        userImgViewerMobile = ActiveUser.Mobile;
+                        userImgViewerId = ActiveUser.ImagePath;})" class="img">
+                    <img src="@ActiveUser.ImagePath" />
+                </div>
+                <div class="name">
+                        <strong>@ActiveUser.Name</strong><br />
+                </div>
+            }
+            else
+            {
+                <div class="img">
+                    <img src="./images/1_LOGO.png" />
+                </div>
+                <div class="name">
+                    <strong>Peter's Soft Network</strong><br />
+                </div>
+            }
+            </div>
+            <div class="search">
+                <input @bind="searchVal" @onblur="(() => Search(nil))" placeholder="search here" />
+                <i class="fas fa-search"></i>
+            </div>
+            <div class="chat-options">
+                <div @onclick="(() => ToggleActiveClass(users))" class="options @GetActiveClass(users)">Chats
+                    @if (numOfUnattendedChats > 0)
+                    {
+                        <span>@numOfUnattendedChats</span>
+                    }
+                </div>
+                <div @onclick="(() => ToggleActiveClass(groups))" class="options @GetActiveClass(groups)">Groups 
+                    @if (numOfUnattendedGroupChats > 0)
+                    {
+                        <span>@numOfUnattendedGroupChats</span>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="chat-container">
+            <div class="message-list @GetActiveClass(users)" id="users">
+                @if (usersList.Count > 0)
+                {
+                    @foreach(var user in usersList)
+                    {
+                        if (user.Id != ActiveUser.Id)
+                        {
+                            <div @onclick="(() => ToggleActiveChat(userMsg,user.Id))" class="d-flex user-list justify-content-between m-2">
+                                <div class="img">
+                                    <img src="@user.ImagePath" />
+                                </div>
+                                <bold>@user.Name</bold>
+                                @if (chatCountHolder.ContainsKey(user.Id) && chatCountHolder[user.Id] > 0)
+                                {
+                                    <div class="num">@chatCountHolder[user.Id]</div>
+                                }
+                            </div>
+                        }
+                    }
+                }
+                else{<p>No other registered user on this platform</p>}
+            </div>
+            <div class="message-list @GetActiveClass(groups)" id="groups">
+                <div class="d-flex justify-content-between">
+                    <span class="@msgClass">@groupErrMsg</span>
+                    <div class="img">
+                        <img src="@newGroupImg" />
+                    </div>
+                </div>
+                <div class="message-input">
+                    <div class="x">
+                        <div @onclick="() => OpenFileDialog(f2)" class="icon-menu">
+                            <i class="fas fa-image"></i>
+                        </div>
+                        <input @bind="newGroupName" type="text" placeholder="Create a new group">
+                    </div>
+                    <button @onclick="CreateNewGroup">Create</button>
+                </div>
+                <div class="hide" style="display: none;">
+                    <InputFile accept=".jpg,.png,.gif,.jpeg" id="f2" OnChange="((e) => Loadfile(e,groups))" />
+                </div>
+
+                @foreach (var group in groupList)
+                {
+                    bool isActiveUserRemovedFromThisGroup = allGroupsLocked.Any(x => x.GroupId.Equals(group.Id) && x.UserLockedId.Equals(ActiveUser.Id) && x.IsLocked);
+                    if (!isActiveUserRemovedFromThisGroup)
+                    {
+                        <div @onclick="(() => ToggleActiveChat(groupMsg,group.Id))" class="d-flex user-list justify-content-between m-2">
+                            <div class="img">
+                                <img src="@group.GroupImg" />
+                            </div>
+                            <bold>
+                                @group.Name &nbsp;&nbsp;&nbsp;
+                                @if (ActiveUser.IsAdmin || ActiveUser.Id == group.AdminId)//or person that created
+                                {
+                                    <i @onclick="(() => GroupUserLock(group.Id,group.AdminId,group.Name))" class="fas fa-user-lock"></i>
+                                    <i class="fas fa-trash" @onclick="(() => {showDialog = true; deleteId = group.Id; deleteSection = groups;})" />
+                                }
+                            </bold>
+                            @if (groupChatCountHolder.ContainsKey(ActiveUser.Id))
+                            {
+                                if (groupChatCountHolder[ActiveUser.Id].ContainsKey(group.Id) && groupChatCountHolder[ActiveUser.Id][group.Id] > 0)
+                                {
+                                    <div class="num">@groupChatCountHolder[ActiveUser.Id][group.Id]</div>
+                                }
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        if (groupChatCountHolder.ContainsKey(ActiveUser.Id) && groupChatCountHolder[ActiveUser.Id][group.Id] > 0)
+                        {
+                            groupChatCountHolder[ActiveUser.Id][group.Id] = 0;
+                        }
+                    }
+                }
+            </div>
+    </div>
+    </div>
+</section>
+
+@if (showDialog)
+{
+    <section class="dialog">
+        <div class="container">
+            <span @onclick="(() => {showDialog=false;})">x</span>
+            @if (deleteSection == groups)
+            {
+                <em>Do you want to permanently delete this group?
+                    <br />All conversations within it with be deleted also
+                    <br />This action can not be undone!
+                </em>
+            }
+            else
+            {
+                <em>Do you want to permanently delete this chat?</em>
+            }
+            <i @onclick="DeleteChat" class="fas fa-trash"></i>
+        </div>
+    </section>
+}
+@if (showImgViewerDialog)
+{
+    <section class="dialog img-viewer">
+        <div class="container">
+        <span @onclick="(() => {showImgViewerDialog=false;})">x</span>
+        <ImgViewer userImgViewerEmail="@userImgViewerEmail"
+                ImgPath="@userImgViewerId"
+                userImgViewerName="@userImgViewerName"
+                userImgViewerMobile="@userImgViewerMobile"
+                ShowDialog="showImgViewerDialog" />
+        </div>
+    </section>
+}
+
+@code{
+    [Parameter]
+    public Users ActiveUser { get; set; } = new();
+    List<Users> usersList = new();
+    List<Chats> chatMessages = new();
+    List<Chats> allChats = new();
+    private Users ReceivingUser = new();
+    private string users = "users";
+    private string groups = "groups";
+    private string userMsg = "userMsg";
+    private string groupMsg = "groupMsg";
+    private string f1 = "f1";
+    private string f2 = "f2";
+    private string f3 = "f3";
+    string send = "send";
+    string receive = "receive";
+    string cssChatClass = "";
+    private string nil = "";
+    private string activeChat = "";
+    private string activeCssClass = "users";
+    private string chatBody = "";
+    string deleteId = "";
+    string deleteSection = "";
+    string scrollId = "";
+    DateTime chatDate = new DateTime();
+    bool showDialog = false;
+    bool showImgViewerDialog = false;
+    string userImgViewerId = "";
+    string userImgViewerEmail = "";
+    string userImgViewerMobile = "";
+    string userImgViewerName = "";
+    Dictionary<string, int> chatCountHolder = new();
+    private ElementReference messageListRef;
+    private bool scrollToBottomRequested = false;
+    int numOfUnattendedChats = 0;
+    int numOfUnattendedGroupChats = 0;
+    string msgClass = "";
+    string searchVal = "";
+    /*group variables*/
+    private string groupErrMsg = "Create New Group, connect with friends!";
+    private string newGroupName = "";
+    private string newGroupImg = "./images/1_LOGO.png";
+    private string groupChatBody = "";
+    private string activeGroupId = "";
+    List<Groups> groupList = new();
+    Groups currentGroup = new();
+    List<GroupChats> allGroupChats = new();
+    List<GroupChats> currentGroupChats = new();
+    DateTime groupChatDate = new DateTime();
+    Dictionary<string, Dictionary<string, int>> groupChatCountHolder = new();
+    List<string> groupChattingUsers = new();
+    List<GroupLock> allGroupsLocked = new();
+    /*Last Seen*/
+    Dictionary<string, DateTime> LastSeenDict = new Dictionary<string, DateTime>();
+    string userLastSeenMsg = "offline";
+
+    private HubConnection hubConnection => signalR.HubConnection;
+    protected override void OnInitialized()
+    {
+        usersList = database.ReadAll<string, Users>("Users").Values.ToList();
+        groupList = database.ReadAll<string, Groups>("Groups").Values.ToList();
+        allGroupChats = database.ReadAll<string, GroupChats>("GroupChats").Values.ToList();
+        allGroupsLocked = database.ReadAll<string, GroupLock>("GroupLock").Values.ToList();
+        RefreshAllChats();
+        GetGroupChatCountFromDb();
+        hubConnection.On<Chats>("NewChat", NewChatUpdate);
+        hubConnection.On<string, string>("Delete", UpdateDeletedChat);
+        hubConnection.On<GroupChats>("NewGroupChat", UpdateGroupChats);
+        hubConnection.On<Groups>("NewGroup", UpdateNewGroup);
+        hubConnection.On<string>("RefreshLastSeen", RefreshLastSeen);
+        hubConnection.On<string, string>("UpdateActiveUserStatus", UpdateActiveUserStatus);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            GetUnreadChatsCount();
+            ComputeNumberOfUnattendedChats();
+            UpdateLastSeen(ActiveUser.Id);
+            AddRemoveActiveUserStatus("add");
+        }
+        await ScrollToBottom();
+    }
+    private async void AddRemoveActiveUserStatus(string operation)
+    {
+        try
+        {
+            if (ActiveUser.Id != "" && operation != "")
+            {
+                await hubConnection.SendAsync("AddRemoveActiveUser", ActiveUser.Id, operation);
+            }
+        }
+        catch (Exception)
+        {
+        }
+    }
+    private void UpdateActiveUserStatus(string userId, string operation)
+    {
+        if (operation == "add")
+        {
+            groupChattingUsers.Add(userId);
+        }
+        else if(operation == "remove")
+        {
+            groupChattingUsers.Remove(userId);
+        }
+        InvokeAsync(StateHasChanged);
+    }
+    private async Task ScrollToBottom()
+    {
+        if (scrollToBottomRequested)
+        {
+            scrollToBottomRequested = false; // Reset the flag
+            await jsRuntime.InvokeVoidAsync("scrollToBottom",scrollId);
+        }
+    }
+
+    private void NewChatUpdate(Chats chat)
+    {
+        if ((chat.SenderId.Equals(ActiveUser.Id)
+        && chat.ReceiverId.Equals(ReceivingUser.Id))
+        || (chat.SenderId.Equals(ReceivingUser.Id)
+        && chat.ReceiverId.Equals(ActiveUser.Id)))
+        {
+            chatMessages.Add(chat);
+            if (chat.SenderId.Equals(ActiveUser.Id))
+            {
+                UpdateReadChats(ActiveUser.Id, ReceivingUser.Id, false);
+            }
+            else
+            {
+                UpdateReadChats(ReceivingUser.Id, ActiveUser.Id, false);
+            }
+            scrollToBottomRequested = true;
+            scrollId = "message-list";
+        }
+        else if (chat.ReceiverId.Equals(ActiveUser.Id))
+        {
+            chatCountHolder[chat.SenderId] = chatCountHolder[chat.SenderId] + 1;
+        }
+        allChats.Add(chat);
+        ComputeNumberOfUnattendedChats();
+        InvokeAsync(StateHasChanged);
+    }
+    private void ComputeNumberOfUnattendedChats()
+    {
+        numOfUnattendedChats = 0;
+        foreach (var count in chatCountHolder.Values)
+        {
+            if (count > 0)
+            {
+                numOfUnattendedChats++;
+            }
+        }
+        InvokeAsync(StateHasChanged);
+    }
+    private void UpdateDeletedChat(string section, string id)
+    {
+        if (section == userMsg)
+        {
+            var chat = allChats.Find(x => x.Id == id);
+            if (chat != null && chat.Id != "")
+            {
+                if ((chat.SenderId.Equals(ActiveUser.Id)
+                && chat.ReceiverId.Equals(ReceivingUser.Id))
+                || (chat.SenderId.Equals(ReceivingUser.Id)
+                && chat.ReceiverId.Equals(ActiveUser.Id)))
+                {
+                    chatMessages.Remove(chat);
+                    allChats.Remove(chat);
+                }
+                else
+                {
+                    allChats.Remove(chat);
+                }
+            }
+        }
+        else if (section == groupMsg)
+        {
+            var groupChat = allGroupChats.Find(x => x.Id == id);
+            if (groupChat != null && groupChat.Id != "" && activeGroupId == groupChat.GroupId)
+            {
+                currentGroupChats.Remove(groupChat);
+            }
+            allGroupChats.Remove(groupChat ?? new());
+        }
+        else if(section == groups)
+        {
+            Groups group = groupList.Find(x => x.Id == id) ?? new();
+            if (activeGroupId == group.Id)
+            {
+                activeChat = nil;
+            }
+            groupList.Remove(group);
+        }
+        InvokeAsync(StateHasChanged);
+    }
+    private void GetUnreadChatsCount()
+    {
+        if (ActiveUser.Id != "" && allChats.Count > 0 && usersList.Count > 0)
+        {
+            foreach (var user in usersList)
+            {
+                if (user.Id != ActiveUser.Id && !chatCountHolder.ContainsKey(user.Id))
+                {
+                    int chatCount = (allChats.Where(x => user.Id.Equals(x.SenderId)
+                    && x.ReceiverId.Equals(ActiveUser.Id)
+                    && !x.HasReceiverViewedChat)).Count();
+                    chatCountHolder.Add(user.Id, chatCount);
+                }
+            }
+            InvokeAsync(StateHasChanged);
+        }
+    }
+    private async void OpenFileDialog(string id)
+    {
+        await jsRuntime.InvokeVoidAsync("openFileDialog",id);
+    }
+    private void ToggleActiveClass(string section)
+    {
+        activeCssClass = section;
+        searchVal = "";
+        //Refresh the search when toggled
+        Search(section);
+    }
+    private string GetActiveClass(string section)
+    {
+        return activeCssClass == section ? "active" : "";
+    }
+    private void ToggleActiveChat(string section, string id)
+    {
+        activeChat = section;
+        if (!string.IsNullOrEmpty(ActiveUser.Id))
+        {
+            if (section.Equals(userMsg) && id != "")
+            {
+                ReceivingUser = usersList.Find(x => x.Id == id) ?? new();
+                UpdateReadChats(ActiveUser.Id, ReceivingUser.Id,true);
+                var _chats = allChats.Where(c => (c.SenderId.Equals(ActiveUser.Id)
+                && c.ReceiverId.Equals(ReceivingUser.Id)) || (c.SenderId.Equals(ReceivingUser.Id)
+                && c.ReceiverId.Equals(ActiveUser.Id)));
+                chatMessages = _chats.OrderBy(c => c.Date).ToList();
+                scrollId = "message-list";
+                scrollToBottomRequested = true;
+                ComputeNumberOfUnattendedChats();
+                ComputeUserLastSeenTime(ReceivingUser.Id);
+            }
+            else if (section.Equals(groupMsg) && id != "")
+            {
+                activeGroupId = id;
+                currentGroupChats = allGroupChats.Where(x => x.GroupId.Equals(id))
+                .OrderBy(x => x.Date).ToList();
+                currentGroup = groupList.Find(x => x.Id.Equals(id)) ?? new();
+                scrollId = "message-group";
+                scrollToBottomRequested = true;
+                if (groupChatCountHolder.ContainsKey(ActiveUser.Id))
+                {
+                    groupChatCountHolder[ActiveUser.Id][id] = 0;
+                }
+                ComputeNumberOfUnattendedGroupChats();
+            }
+            else
+            {
+                //else if nil nil clear chat and group messages
+                chatMessages = new();
+                ReceivingUser = new();
+                chatDate = new DateTime();
+                activeGroupId = "";
+                searchVal = "";
+                currentGroupChats = new();
+            }
+            UpdateLastSeen(ActiveUser.Id);
+        }
+        else
+        {
+            navigationManager.NavigateTo("/login");
+        }
+    }
+    private void UpdateReadChats(string activeUserId, string receivingUserId, bool refreshAllChats)
+    {
+        //when A sends message at his end as sender, B at his end opens the message and bears tag as receiver
+        //That's the reason for this code logic below
+        //Sender and receiver swap identities at each end
+        var unReadChats = allChats.Where(x => x.SenderId.Equals(receivingUserId) && x.ReceiverId.Equals(activeUserId) && !x.HasReceiverViewedChat);
+        if (unReadChats != null && unReadChats.Count() > 0)
+        {
+            foreach (var chat in unReadChats)
+            {
+                chat.HasReceiverViewedChat = true;
+                string key = JsonConvert.SerializeObject(chat.Id);
+                string value = JsonConvert.SerializeObject(chat);
+                var isUpdated = database.Create("Chats", key, value);
+                if (isUpdated && chatCountHolder.ContainsKey(receivingUserId))
+                {
+                    chatCountHolder[receivingUserId] = 0;
+                }
+            }
+            if (refreshAllChats)
+            {
+                RefreshAllChats();
+            }
+        }
+
+    }
+    private void RefreshAllChats()
+    {
+        allChats = database.ReadAll<string, Chats>("Chats").Values.ToList<Chats>();
+    }
+    private string GetActiveChat(string section)
+    {
+        return activeChat == section ? "active" : "";
+    }
+    private async void SendChat(bool hasImage)
+    {
+        if (chatBody != "" && ActiveUser.Id != "" && ReceivingUser.Id != "")
+        {
+            var msg = new Chats()
+            {
+                Id = Guid.NewGuid().ToString(),
+                SenderId = ActiveUser.Id,
+                ReceiverId = ReceivingUser.Id,
+                Body = chatBody,
+                Date = DateTime.Now,
+                IsBodyImage = hasImage
+            };
+            string key = JsonConvert.SerializeObject(msg.Id);
+            string value = JsonConvert.SerializeObject(msg);
+            var isAdded = database.Create("Chats", key, value);
+            if (isAdded)
+            {
+                await hubConnection.SendAsync("SendMessage", msg);
+                chatBody = "";
+            }
+        }
+    }
+    private async void Loadfile(InputFileChangeEventArgs e,string section)
+    {
+        var img = await imageUpload.CaptureFile(e.File);
+        if (section == userMsg)
+        {
+            chatBody = img;
+            SendChat(true);
+        }
+        else if(section == groupMsg)
+        {
+            //add image to group
+            groupErrMsg = "";
+            groupChatBody = img;
+            AddGroupChat(true);
+        }
+        else if (section == groups)
+        {
+            newGroupImg = img;
+            //create new group
+        }
+    }
+    private async void DeleteChat()
+    {
+        bool isDel = false;
+        if (deleteId != "" && deleteSection == userMsg)
+        {
+            isDel = database.Delete("Chats", deleteId);
+        }
+        else if (deleteId != "" && deleteSection == groupMsg)
+        {
+            isDel = database.Delete("GroupChats", deleteId);
+        }
+        else if (deleteId != "" && deleteSection == groups)
+        {
+            isDel = database.Delete("Groups", deleteId);
+        }
+
+        try
+        {
+            if (isDel)
+            {
+                DeleteImage(deleteId, deleteSection);
+                await hubConnection.SendAsync("DeleteChat", deleteSection, deleteId);
+                deleteId = "";
+                deleteSection = "";
+                showDialog = false;
+            }
+        }
+        catch (Exception)
+        {
+        }
+    }
+    private void DeleteImage(string deleteId, string deleteSection)
+    {
+        if (deleteSection == userMsg)
+        {
+            var chat = allChats.Find(x => x.Id == deleteId);
+            if (chat != null && chat.IsBodyImage)
+            {
+                imageUpload.DeleteImage(chat.Body);
+            }
+        }
+        else if(deleteSection == groupMsg)
+        {
+            var chat = allGroupChats.Find(x => x.Id == deleteId);
+            if (chat != null && chat.IsBodyImage)
+            {
+                imageUpload.DeleteImage(chat.Body);
+            }
+        }
+    }
+    /*group codes*/
+    private void UpdateGroupChats(GroupChats chat)
+    {
+        bool isActiveUserRemovedFromThisGroup = allGroupsLocked.Any(x => x.GroupId.Equals(chat.GroupId) && x.UserLockedId.Equals(ActiveUser.Id) && x.IsLocked);
+        if (!isActiveUserRemovedFromThisGroup)//if user is an added member of the group then he can get messages.
+        {
+            if (chat.GroupId.Equals(activeGroupId))
+            {
+                currentGroupChats.Add(chat);
+                scrollId = "message-group";
+                scrollToBottomRequested = true;
+            }
+            UpdateGroupChatCount(chat.GroupId);
+            allGroupChats.Add(chat);
+            ComputeNumberOfUnattendedGroupChats();
+            InvokeAsync(StateHasChanged);
+        }
+    }
+    private void UpdateGroupChatCount(string groupId)
+    {
+        //This will be updated in realtime by signalR for each user instance
+        //The first dictionary contains userId, the second contain groupId
+        var user = ActiveUser;
+        if (groupId != "" && activeGroupId != groupId && user.Id != "")
+        {
+            if (groupChatCountHolder.ContainsKey(user.Id))
+            {
+                if (groupChatCountHolder[user.Id].ContainsKey(groupId))
+                {
+                    int currentCount = groupChatCountHolder[user.Id][groupId];
+                    groupChatCountHolder[user.Id][groupId] = currentCount + 1;
+                }
+                else
+                {
+                    groupChatCountHolder[user.Id][groupId] = 1;
+                }
+            }
+            else
+            {
+                var newDict = new Dictionary<string, int>();
+                newDict.Add(groupId, 1);
+                groupChatCountHolder[user.Id] = newDict;
+            }
+        }
+    }
+    private void AddGroupChatCountToOfflineUsers(string groupId)
+    {
+        foreach (var user in usersList)
+        {
+            if (!groupChattingUsers.Contains(user.Id))
+            {
+                var currentChatCountResult = database.Read<string, int>("GroupChatCount/" + user.Id,groupId);
+                int currentChatCount = currentChatCountResult.Value + 1;
+
+                bool isActiveUserRemovedFromThisGroup = allGroupsLocked.Any(x => x.GroupId.Equals(groupId) && x.UserLockedId.Equals(user.Id) && x.IsLocked);
+                if (!isActiveUserRemovedFromThisGroup)//if user is member of this group
+                {
+                    string key = JsonConvert.SerializeObject(groupId);
+                    string value = JsonConvert.SerializeObject(currentChatCount);
+                    database.Create("GroupChatCount/" + user.Id, key, value);
+                }
+            }
+        }
+    }
+    private void AddGroupChatCountToOfflineUsersHelper(string groupId, string userId)
+    {
+        //This code is an alternative to the main method above
+        var data = database.ReadAll<string, int>("GroupChatCount/" + userId);
+        if (data != null && data.ContainsKey(groupId))
+        {
+            var countVal = data[groupId] + 1;
+            string key = JsonConvert.SerializeObject(groupId);
+            string value = JsonConvert.SerializeObject(countVal);
+            database.Create("GroupChatCount/" + userId, key, value);
+            //Console.WriteLine(countVal);
+        }
+    }
+    private void GetGroupChatCountFromDb()
+    {
+        //On dispose Add GroupChat Count to db.
+        var chatCountResult = database.ReadAll<string, int>("GroupChatCount/" + ActiveUser.Id);
+        if (chatCountResult != null && chatCountResult.Count > 0 && ActiveUser.Id != "")
+        {
+            groupChatCountHolder[ActiveUser.Id] = chatCountResult;
+            ComputeNumberOfUnattendedGroupChats();
+        }
+    }
+    private void ComputeNumberOfUnattendedGroupChats()
+    {
+        if (groupChatCountHolder.ContainsKey(ActiveUser.Id))
+        {
+            numOfUnattendedGroupChats = groupChatCountHolder[ActiveUser.Id].Where(x => x.Value > 0).Count();
+        }
+    }
+    private void AddUnreadGroupChatToDbOnDispose()
+    {
+        if (ActiveUser.Id != "" && groupChatCountHolder.ContainsKey(ActiveUser.Id))
+        {
+            foreach (var group in groupList)
+            {
+                if (groupChatCountHolder[ActiveUser.Id].ContainsKey(group.Id))
+                {
+                    string key = JsonConvert.SerializeObject(group.Id);
+                    string value = JsonConvert.SerializeObject(groupChatCountHolder[ActiveUser.Id][group.Id]);
+                    database.Create("GroupChatCount/" + ActiveUser.Id, key, value);
+                }
+            }
+        }
+    }
+    private void UpdateNewGroup(Groups group)
+    {
+        groupList.Add(group);
+        InvokeAsync(StateHasChanged);
+    }
+    private async void CreateNewGroup()
+    {
+        var isAnyNameExist = groupList.Any(x => x.Name.ToLower().Equals(newGroupName.ToLower()));
+        if (ActiveUser.Id != "" && newGroupName != "" && !isAnyNameExist)
+        {
+            if (newGroupImg != "./images/1_LOGO.png")
+            {
+                Groups group = new Groups()
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Name = newGroupName,
+                    AdminId = ActiveUser.Id,
+                    GroupImg = newGroupImg
+                };
+                string id = JsonConvert.SerializeObject(group.Id);
+                string value = JsonConvert.SerializeObject(group);
+                var isAdded =database.Create("Groups", id, value);
+                try
+                {
+                    if (isAdded)
+                    {
+                        await hubConnection.SendAsync("AddGroup", group);
+                        newGroupImg = "./images/1_LOGO.png";
+                        groupErrMsg = $"You created a new group {newGroupName}";
+                        msgClass = "green";
+                        newGroupName = "";
+                    }
+                }
+                catch (Exception)
+                {
+                }
+
+            }
+            else
+            {
+                groupErrMsg = "Kindly add a group icon";
+                msgClass = "red";
+            }
+        }
+        else
+        {
+            msgClass = "red";
+            if (isAnyNameExist)
+            {
+                groupErrMsg = "Group Name exist. Kindly Choose Another.";
+            }
+            else
+            {
+                groupErrMsg = "You must be signed in & group name must not be empty.";
+            }
+        }
+    }
+    private async void AddGroupChat(bool hasImage)
+    {
+        if (ActiveUser.Id != "" && groupChatBody != "" && activeGroupId != "")
+        {
+            var groupChat = new GroupChats()
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    SenderId = ActiveUser.Id,
+                    SenderNames = ActiveUser.Name,
+                    SenderImg = ActiveUser.ImagePath,
+                    Body = groupChatBody,
+                    GroupId = activeGroupId,
+                    IsBodyImage = hasImage,
+                    Date = DateTime.Now
+                };
+            string key = JsonConvert.SerializeObject(groupChat.Id);
+            string value = JsonConvert.SerializeObject(groupChat);
+            var isAdded = database.Create("GroupChats", key, value);
+            try
+            {
+                if (isAdded)
+                {
+                    AddGroupChatCountToOfflineUsers(groupChat.GroupId);
+                    //AddGroupChatCountToOfflineUsersHelper(groupChat.GroupId, "a79ddb82-62f5-4750-81c2-871ee00ce9a9");
+                    await hubConnection.SendAsync("AddGroupChat", groupChat);
+                    groupChatBody = "";
+                }
+            }
+            catch (Exception)
+            {
+            }
+        }
+    }
+    /*Search*/
+    private void Search(string section)
+    {
+        if (section == userMsg)
+        {
+            var _chats = allChats.Where(c => ((c.SenderId.Equals(ActiveUser.Id)
+                && c.ReceiverId.Equals(ReceivingUser.Id)) || (c.SenderId.Equals(ReceivingUser.Id)
+                && c.ReceiverId.Equals(ActiveUser.Id))) && c.Body.ToLower().Contains(searchVal.ToLower()));
+            chatMessages = _chats.OrderBy(x => x.Date).ToList();
+        }
+        else if(section == groupMsg)
+        {
+            currentGroupChats = allGroupChats.Where(x => x.GroupId.Equals(activeGroupId) && x.Body.ToLower()
+                .Contains(searchVal.ToLower())).OrderBy(x => x.Date).ToList();
+        }
+        else if(activeCssClass == users)
+        {
+            var usersList2 = database.ReadAll<string, Users>("Users").Values.ToList();
+            usersList = usersList2.Where(x => x.Name.ToLower().Contains(searchVal.ToLower())).ToList();
+        }
+        else if(activeCssClass == groups)
+        {
+            var groupList2 = database.ReadAll<string, Groups>("Groups").Values.ToList();
+            groupList = groupList2.Where(x => x.Name.ToLower().Contains(searchVal.ToLower())).ToList();
+        }
+    }
+    private async void UpdateLastSeen(string userId)
+    {
+        try
+        {
+            if (userId != "")
+            {
+                await hubConnection.SendAsync("UpdateLastSeen", userId);
+            }
+        }
+        catch (Exception)
+        {
+
+        }
+    }
+    private void RefreshLastSeen(string userId)
+    {
+        LastSeenDict[userId] = DateTime.Now;
+        InvokeAsync(StateHasChanged);
+    }
+    private void ComputeUserLastSeenTime(string receiverId)
+    {
+        if (receiverId != "" && LastSeenDict.ContainsKey(receiverId))
+        {
+            var timeDiff = DateTime.Now.Subtract(LastSeenDict[receiverId]);
+            if (timeDiff.TotalDays >= 1)
+            {
+                userLastSeenMsg = $"last seen {timeDiff.TotalDays} days ago";
+            }
+            else if(timeDiff.TotalMinutes > 1)
+            {
+                int minutesAgo = (int)Math.Round(timeDiff.TotalMinutes); // Round the value
+                userLastSeenMsg = $"active {minutesAgo} minutes ago";
+            }
+            else
+            {
+                userLastSeenMsg = "online";
+            }
+        }
+        else
+        {
+            userLastSeenMsg = "offline";
+        }
+    }
+    private void GroupUserLock(string groupId, string adminId, string groupName)
+    {
+        store.AddGroupLockParameters(groupId,adminId,groupName);
+        navigationManager.NavigateTo("/grouplock");
+    }
+    public void Dispose()
+    {
+        UpdateLastSeen(ActiveUser.Id);
+        AddRemoveActiveUserStatus("remove");
+        AddUnreadGroupChatToDbOnDispose();
+    }
+}

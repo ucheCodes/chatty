@@ -1,0 +1,50 @@
+﻿@page "/users"
+<section class="dynamic-table">
+    <div class="table">
+        <div class="table-header">
+            <h3>Users</h3>
+        </div>
+        <div class="table-body">
+            <table>
+                <thead>
+                    <tr>
+                        <th>S/N</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Mobile</th>
+                        <th>Gender</th>
+                        <th>Image</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in users)
+                    {
+                        count++;
+                        <tr>
+                            <td>@count</td>
+                            <td>@user.Name</td>
+                            <td>@user.Email</td>
+                            <td>@user.Mobile</td>
+                            <td>@user.Gender</td>
+                            <td><img src="@user.ImagePath" alt=""></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+@code {
+    List<Users> users = new();
+    int count = 0;
+    protected override void OnInitialized()
+    {
+        users = database.ReadAll<string, Users>("Users").Values.ToList();
+    }
+    protected override void OnAfterRender(bool firstRender)
+    {
+        count = 0;
+    }
+}
+
