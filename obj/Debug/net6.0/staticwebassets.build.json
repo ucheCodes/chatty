@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "2I1sK/BzQDS6gSPAEwUa2TvDikz8F2hVGc2Nh2zqklw=",
+  "Hash": "CryTIWUS1ZZDL+a+vZ5fguOpXFuw++Peboef+f1Kryc=",
   "Source": "Chatty",
   "BasePath": "_content/Chatty",
   "Mode": "Default",
@@ -423,23 +423,6 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot\\Upload\\0q4hegy2.png"
-    },
-    {
-      "Identity": "C:\\Users\\peter soft\\source\\repos\\Chatty\\Chatty\\wwwroot\\Upload\\13zs1csh.mp4",
-      "SourceId": "Chatty",
-      "SourceType": "Discovered",
-      "ContentRoot": "C:\\Users\\peter soft\\source\\repos\\Chatty\\Chatty\\wwwroot\\",
-      "BasePath": "_content/Chatty",
-      "RelativePath": "Upload/13zs1csh.mp4",
-      "AssetKind": "All",
-      "AssetMode": "All",
-      "AssetRole": "Primary",
-      "RelatedAsset": "",
-      "AssetTraitName": "",
-      "AssetTraitValue": "",
-      "CopyToOutputDirectory": "Never",
-      "CopyToPublishDirectory": "PreserveNewest",
-      "OriginalItemSpec": "wwwroot\\Upload\\13zs1csh.mp4"
     },
     {
       "Identity": "C:\\Users\\peter soft\\source\\repos\\Chatty\\Chatty\\wwwroot\\Upload\\25fxe4ud.jpg",
@@ -901,6 +884,23 @@
       "OriginalItemSpec": "wwwroot\\Upload\\o5bz5vjs.jpg"
     },
     {
+      "Identity": "C:\\Users\\peter soft\\source\\repos\\Chatty\\Chatty\\wwwroot\\Upload\\oa1afhhp.png",
+      "SourceId": "Chatty",
+      "SourceType": "Discovered",
+      "ContentRoot": "C:\\Users\\peter soft\\source\\repos\\Chatty\\Chatty\\wwwroot\\",
+      "BasePath": "_content/Chatty",
+      "RelativePath": "Upload/oa1afhhp.png",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\Upload\\oa1afhhp.png"
+    },
+    {
       "Identity": "C:\\Users\\peter soft\\source\\repos\\Chatty\\Chatty\\wwwroot\\Upload\\pqj4wrek.jpg",
       "SourceId": "Chatty",
       "SourceType": "Discovered",
@@ -1052,6 +1052,23 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot\\Upload\\w5jv5q5v.jpg"
+    },
+    {
+      "Identity": "C:\\Users\\peter soft\\source\\repos\\Chatty\\Chatty\\wwwroot\\Upload\\y2geqdyv.jpg",
+      "SourceId": "Chatty",
+      "SourceType": "Discovered",
+      "ContentRoot": "C:\\Users\\peter soft\\source\\repos\\Chatty\\Chatty\\wwwroot\\",
+      "BasePath": "_content/Chatty",
+      "RelativePath": "Upload/y2geqdyv.jpg",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\Upload\\y2geqdyv.jpg"
     },
     {
       "Identity": "C:\\Users\\peter soft\\source\\repos\\Chatty\\Chatty\\wwwroot\\Upload\\yxegs3hv.jpg",

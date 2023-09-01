@@ -2,58 +2,65 @@
 @inject IStore store
 @implements IDisposable
 
-<div class="search-table d-flex justify-content-center">
-    <input @bind="searchVal" @onblur="(Search)" placeholder="search by name,email or gender" />
-</div>
-<section class="dynamic-table">
-    <div class="table">
-        <div class="table-header">
-            <h3>@groupName Group Restriction</h3>
-        </div>
-        <div class="table-lock">
-        <div class="table-body">
-            <table>
-                <thead>
-                    <tr>
-                        <th>S/N</th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Mobile</th>
-                        <th>Gender</th>
-                        <th>Image</th>
-                        <th>Remove User</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var user in users)
-                    {
-                        if (!user.IsAdmin && user.Id != adminId)//&& not the person that created
-                        {
-                            count++;
-                            <tr>
-                                <td>@count</td>
-                                <td>@user.Name</td>
-                                <td>@user.Email</td>
-                                <td>@user.Mobile</td>
-                                <td>@user.Gender</td>
-                                <td><img src="@user.ImagePath" alt=""></td>
-                                @if (UserLockDict.ContainsKey(user.Id))
-                                {
-                                    <td><input checked="@UserLockDict[user.Id]" @onclick="(() => LockUser(user.Id))" type="checkbox" /></td>
-                                }
-                                else
-                                {
-                                    <td><input @onclick="(() => LockUser(user.Id))" type="checkbox" /></td>
-                                }
-                            </tr>
-                        }
-                    }
-                </tbody>
-            </table>
-        </div>
-        </div>
+@if (users.Count > 0)
+{
+    <div class="search-table d-flex justify-content-center">
+        <input @bind="searchVal" @onblur="(Search)" placeholder="search by name,email or gender" />
     </div>
-</section>
+    <section class="dynamic-table">
+        <div class="table">
+            <div class="table-header">
+                <h3>@groupName Group Restriction</h3>
+            </div>
+            <div class="table-lock">
+                <div class="table-body">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>S/N</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Mobile</th>
+                                <th>Gender</th>
+                                <th>Image</th>
+                                <th>Remove User</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var user in users)
+                            {
+                                if (!user.IsAdmin && user.Id != adminId)//&& not the person that created
+                                {
+                                    count++;
+                                    <tr>
+                                        <td>@count</td>
+                                        <td>@user.Name</td>
+                                        <td>@user.Email</td>
+                                        <td>@user.Mobile</td>
+                                        <td>@user.Gender</td>
+                                        <td><img src="@user.ImagePath" alt=""></td>
+                                        @if (UserLockDict.ContainsKey(user.Id))
+                                        {
+                                            <td><input checked="@UserLockDict[user.Id]" @onclick="(() => LockUser(user.Id))" type="checkbox" /></td>
+                                        }
+                                        else
+                                        {
+                                            <td><input @onclick="(() => LockUser(user.Id))" type="checkbox" /></td>
+                                        }
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+}
+else
+{
+    <p class="mt-5">No user available for restriction</p>
+}
 
 @code {
     List<Users> users = new();

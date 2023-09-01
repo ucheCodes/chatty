@@ -1,4 +1,5 @@
 ﻿@page "/users"
+@inject IStore store
 <section class="dynamic-table">
     <div class="table">
         <div class="table-header">
@@ -14,6 +15,10 @@
                         <th>Mobile</th>
                         <th>Gender</th>
                         <th>Image</th>
+                        @if (store.State().ActiveUser.ActiveUser.IsAdmin)
+                        {
+                           <th>Delete</th> 
+                        }
                     </tr>
                 </thead>
                 <tbody>
@@ -27,6 +32,10 @@
                             <td>@user.Mobile</td>
                             <td>@user.Gender</td>
                             <td><img src="@user.ImagePath" alt=""></td>
+                            @if (store.State().ActiveUser.ActiveUser.IsAdmin)
+                            {
+                                <td @onclick="(() => {showDialog = true; deleteId = user.Id;})"><i class="fas fa-trash"></i></td>
+                            }
                         </tr>
                     }
                 </tbody>
@@ -35,9 +44,22 @@
     </div>
 </section>
 
+@if (showDialog)
+{
+    <section class="dialog">
+        <div class="container">
+            <span @onclick="(() => {showDialog=false;})">x</span>
+            <em>Do you want to permanently delete this user account from this system?</em>
+            <i @onclick="(() => DeleteUser(deleteId))" class="fas fa-trash" />
+        </div>
+    </section>
+}
+
 @code {
     List<Users> users = new();
     int count = 0;
+    string deleteId = "";
+    bool showDialog = false;
     protected override void OnInitialized()
     {
         users = database.ReadAll<string, Users>("Users").Values.ToList();
@@ -45,6 +67,18 @@
     protected override void OnAfterRender(bool firstRender)
     {
         count = 0;
+    }
+    private void DeleteUser(string id)
+    {
+        if (id != "")
+        {
+            var isDel = database.Delete("Users", id);
+            if (isDel)
+            {
+                users = users.Where(x => x.Id != id).ToList();
+                showDialog = false;
+            }
+        }
     }
 }
 

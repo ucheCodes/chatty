@@ -1,10 +1,11 @@
 ﻿:root {
     --box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-    --blue: linear-gradient(180deg, rgb(5, 39, 103) 0%, #4d4dff 70%);/*#007bff;*/
+    --blue: linear-gradient(180deg, rgb(5, 39, 103) 0%, #4d4dff 70%); /*#007bff;*/
     --sec-blue: #4d4dff;
+    --navy-blue: cornflowerblue;
 }
 .red{
-    color: maroon;
+    color: red;
 }
 .green{
     color: green;
@@ -115,10 +116,13 @@ p {
 .message-list {
     padding: 12px;
     border-bottom: 1px solid #ddd;
-    max-height: 400px;
+    height: 60vh;
     overflow-y: auto;
     display: none;
     flex-direction: column;
+}
+.message-list.collapse{
+    height:30vh;
 }
 .message-list.active, #message-list, #message-group {
     display: flex;
@@ -135,7 +139,7 @@ p {
     color: white;
 }
 .message.receive {
-    background: var(--blue);
+    background: var(--navy-blue);
     border-radius: 5px 20px;
     text-align: right;
     margin-left: auto;
@@ -276,6 +280,7 @@ p {
     font-style: italic;
     cursor: pointer;
     float: right;
+    margin:10px 0;
     color: var(--sec-blue);
 }
 .login .btn{
@@ -300,14 +305,14 @@ p {
     background-color: black;
     color: white;
     box-shadow: var(--box-shadow);
+    padding: .5rem;
 }
 .dialog em{
     padding: 2px;
-/*    margin-right: 5px;*/
 }
 .dialog span{
     position: absolute;
-    font-size: 15px;
+    font-size: 20px;
     color: red;
     top: 0;
     right: 2px;
@@ -331,11 +336,17 @@ p {
 .dialog.img-viewer p i{
     margin-right: 5px;
 }
+.dialog.img-viewer p {
+    color: white;
+}
 
 
-    @media(max-width:640px) {
-        .dialog {
-        transform: translate(-50%, -50%);
+@media(max-width:640px) {
+    .dialog {
+    transform: translate(-50%, -50%);
+ }
+    .arrow{
+        font-size: 27px;
     }
 }
 
@@ -349,6 +360,34 @@ p {
     .message-input button{
         width: 100%;
         margin: 2% 10%;
+    }
+    .arrow {
+        font-size: 32px;
+    }
+    .dialog span{
+        font-size: 28px;
+    }
+    .fa-trash {
+        font-size: 18px;
+        margin-left: 5px;
+    }
+    .fa-user-lock {
+        font-size: 20px;
+        margin-right: 15px;
+    }
+    .message-list {
+        height: 50vh;
+    }
+}
+@media(max-width: 345px){
+    .fa-trash {
+        font-size: 14px;
+        margin-left: 3px;
+    }
+
+    .fa-user-lock {
+        font-size: 16px;
+        margin-right: 12px;
     }
 }
 

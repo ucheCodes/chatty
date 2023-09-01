@@ -6,6 +6,11 @@
     element.scrollTop = element.scrollHeight; 
 }
 
+// wwwroot/js/screenSize.js
+window.getScreenWidth = () => {
+    return window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+};
+
 
 function openFileDialog(inputId) {
     document.querySelector(`#${inputId}`).click();

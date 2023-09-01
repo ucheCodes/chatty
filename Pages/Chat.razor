@@ -40,7 +40,7 @@
         </div>
     </div>
     <div class="chat-container">
-        <div class="message-list active" id="message-list">
+        <div class="message-list active @collapseMessageListCssClass" id="message-list">
             @if (chatMessages.Count > 0)
             {
                 chatDate = chatMessages[0].Date;
@@ -90,7 +90,7 @@
                     <i class="fas fa-image"></i>
                 </div>
 
-                <input @bind="chatBody" type="text" placeholder="Type your message...">
+                    <input @onfocusin="CollapseMessageList" @onfocusout="RestoreMessageList" @bind="chatBody" type="text" placeholder="Type your message...">
             </div>
             <button @onclick="(()=>SendChat(false))">Send</button>
         </div>
@@ -110,7 +110,12 @@
             <div class="info">
                 <span @onclick="(() => ToggleActiveChat(nil,nil))" class="arrow">&larr;</span>
                 <div class="name">
-                    <strong>@currentGroup.Name</strong><br />
+                    <strong>@currentGroup.Name&nbsp;
+                        @if (ActiveUser.IsAdmin || ActiveUser.Id == currentGroup.AdminId)
+                        {
+                            <i @onclick="(() => GroupUserLock(currentGroup.Id,currentGroup.AdminId,currentGroup.Name))" class="fas fa-user-lock"></i>
+                        }
+                    </strong><br />
                     <em>@usersList.Count participants</em>
                 </div>
                 <div class="img">
@@ -123,7 +128,7 @@
             </div>
         </div>
         <div class="chat-container">
-            <div class="message-list active" id="message-group">
+            <div class="message-list active @collapseMessageListCssClass" id="message-group">
 
                 @if (currentGroupChats.Count > 0)
                 {
@@ -177,7 +182,7 @@
                     <div @onclick="() => OpenFileDialog(f3)" class="icon-menu">
                         <i class="fas fa-image"></i>
                     </div>
-                    <input @bind="groupChatBody" type="text" placeholder="Type your message...">
+                    <input @onfocusin="CollapseMessageList" @onfocusout="RestoreMessageList" @bind="groupChatBody" type="text" placeholder="Type your message...">
                 </div>
                 <button @onclick="(() => AddGroupChat(false))">Send</button>
             </div>
@@ -294,7 +299,6 @@
                                 @group.Name &nbsp;&nbsp;&nbsp;
                                 @if (ActiveUser.IsAdmin || ActiveUser.Id == group.AdminId)//or person that created
                                 {
-                                    <i @onclick="(() => GroupUserLock(group.Id,group.AdminId,group.Name))" class="fas fa-user-lock"></i>
                                     <i class="fas fa-trash" @onclick="(() => {showDialog = true; deleteId = group.Id; deleteSection = groups;})" />
                                 }
                             </bold>
@@ -410,6 +414,9 @@
     Dictionary<string, DateTime> LastSeenDict = new Dictionary<string, DateTime>();
     string userLastSeenMsg = "offline";
 
+    private int screenWidth;
+    bool collapseMessageList = false;
+    private string collapseMessageListCssClass => collapseMessageList ? "collapse" : "";
     private HubConnection hubConnection => signalR.HubConnection;
     protected override void OnInitialized()
     {
@@ -423,7 +430,7 @@
         hubConnection.On<string, string>("Delete", UpdateDeletedChat);
         hubConnection.On<GroupChats>("NewGroupChat", UpdateGroupChats);
         hubConnection.On<Groups>("NewGroup", UpdateNewGroup);
-        hubConnection.On<string>("RefreshLastSeen", RefreshLastSeen);
+        //hubConnection.On<string>("RefreshLastSeen", RefreshLastSeen);
         hubConnection.On<string, string>("UpdateActiveUserStatus", UpdateActiveUserStatus);
     }
 
@@ -436,6 +443,7 @@
             UpdateLastSeen(ActiveUser.Id);
             AddRemoveActiveUserStatus("add");
         }
+        screenWidth = await jsRuntime.InvokeAsync<int>("getScreenWidth");
         await ScrollToBottom();
     }
     private async void AddRemoveActiveUserStatus(string operation)
@@ -986,13 +994,16 @@
             groupList = groupList2.Where(x => x.Name.ToLower().Contains(searchVal.ToLower())).ToList();
         }
     }
-    private async void UpdateLastSeen(string userId)
+    private void UpdateLastSeen(string userId)
     {
         try
         {
             if (userId != "")
             {
-                await hubConnection.SendAsync("UpdateLastSeen", userId);
+                string key = JsonConvert.SerializeObject(userId);
+                string value = JsonConvert.SerializeObject(DateTime.Now);
+                database.Create("LastSeenTime", key, value);
+                //await hubConnection.SendAsync("UpdateLastSeen", userId);
             }
         }
         catch (Exception)
@@ -1000,16 +1011,17 @@
 
         }
     }
-    private void RefreshLastSeen(string userId)
+    private void RefreshLastSeen(string userId)//not used anymore
     {
-        LastSeenDict[userId] = DateTime.Now;
+        LastSeenDict[userId] = DateTime.Now;//was initially defined for signalR
         InvokeAsync(StateHasChanged);
     }
     private void ComputeUserLastSeenTime(string receiverId)
     {
-        if (receiverId != "" && LastSeenDict.ContainsKey(receiverId))
+        var timeVal = database.Read<string, DateTime>("LastSeenTime", receiverId);
+        if (receiverId != "" && timeVal.Key != null)//LastSeenDict.ContainsKey(receiverId)
         {
-            var timeDiff = DateTime.Now.Subtract(LastSeenDict[receiverId]);
+            var timeDiff = DateTime.Now.Subtract(timeVal.Value);//(LastSeenDict[receiverId]);
             if (timeDiff.TotalDays >= 1)
             {
                 userLastSeenMsg = $"last seen {timeDiff.TotalDays} days ago";
@@ -1033,6 +1045,20 @@
     {
         store.AddGroupLockParameters(groupId,adminId,groupName);
         navigationManager.NavigateTo("/grouplock");
+    }
+    private void CollapseMessageList()
+    {
+        if (screenWidth < 768)//small screens
+        {
+            collapseMessageList = true;
+        }
+    }
+    private void RestoreMessageList()
+    {
+        if (screenWidth < 768)//small screens
+        {
+            collapseMessageList = false;
+        }
     }
     public void Dispose()
     {
