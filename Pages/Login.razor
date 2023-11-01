@@ -16,7 +16,7 @@
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
             </InputSelect>
-            <InputText @onblur="(() => IsLoginEmailValid(user.Email))" @bind-Value="user.Email" maxlength="100" type="email" placeholder="Enter Valid email *" />
+            <InputText @onblur="(() => IsSignUpEmailValid(user.Email))" @bind-Value="user.Email" maxlength="100" type="email" placeholder="Enter Valid email *" />
             <InputText @onblur="(() => IsMobileValid(user.Mobile))" @bind-Value="user.Mobile" maxlength="14" type="text" placeholder="Enter mobile number" />
             <InputText @bind-Value="user.Password1" maxlength="100" type="password" placeholder="Enter password *" />
             <InputText @onblur="(() => CheckPassword())" @bind-Value="user.Password2" maxlength="100" type="password" placeholder="Confirm password *" />
@@ -53,6 +53,7 @@
     string message = "";
     string msgClass = "";
     List<Users> users = new();
+    bool isUserImgLoaded = false;
     private bool isEmailRegistered = false;
     private bool isMobileValid = false;
     private bool isLoginEmailValid;
@@ -127,7 +128,7 @@
     }
     private void SignUSer()
     {
-        if (user.ImagePath != "" && user.ImagePath != "./images/user-2.png")
+        if (isUserImgLoaded)
         {
             if (user.Name != "" && isLoginEmailValid && isMobileValid && CheckPassword() && !IsEmailRegistered())
             {
@@ -136,6 +137,7 @@
                 {
                     user.IsAdmin = true;
                 }
+                message = "submitting data ... please wait";
                 string key = JsonConvert.SerializeObject(user.Id);
                 string value = JsonConvert.SerializeObject(user);
                 var isCreated = database.Create("Users", key, value);
@@ -151,6 +153,11 @@
                     user = new Users();
                     navigationManager.NavigateTo("/");
                 }
+            }
+            else
+            {
+                message = "please ensure all inputs fields are valid!";
+                msgClass = "red";
             }
         }
         else
@@ -172,6 +179,14 @@
                 message = "";
             }
         }
+    }
+    private bool IsSignUpEmailValid(string email)
+    {
+        if (IsLoginEmailValid(email) && !IsEmailRegistered())
+        {
+            return true;
+        }
+        return false;
     }
     private bool IsLoginEmailValid(string loginEmail)
     {
@@ -232,7 +247,7 @@
         }
         else
         {
-            message = "password is not valid";
+            message = "passwords do not match!!!";
             msgClass = "red";
             return false;
         }
@@ -263,8 +278,20 @@
     }
     private async void Loadfile(InputFileChangeEventArgs e)
     {
-        var img = await imageUpload.CaptureFile(e.File);
-        user.ImagePath = img;
+        if (e.File.Size > 0)
+        {
+            isUserImgLoaded = true;
+            message = "image uplaod success ... proceed and submit";
+            msgClass = "green";
+            var img = await imageUpload.CaptureFile(e.File);
+            user.ImagePath = img;
+        }
+        else
+        {
+            message = "file load error ... kindly select another file.";
+            msgClass = "red";
+            isUserImgLoaded = false;
+        }
     }
 }
 

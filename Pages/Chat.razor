@@ -1024,7 +1024,7 @@
             var timeDiff = DateTime.Now.Subtract(timeVal.Value);//(LastSeenDict[receiverId]);
             if (timeDiff.TotalDays >= 1)
             {
-                userLastSeenMsg = $"last seen {timeDiff.TotalDays} days ago";
+                userLastSeenMsg = $"last seen {(int)Math.Round(timeDiff.TotalDays)} days ago";
             }
             else if(timeDiff.TotalMinutes > 1)
             {
